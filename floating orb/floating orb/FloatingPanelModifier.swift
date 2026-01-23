@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// SwiftUI helper to move the hosting window with a drag and snap it to the nearest screen edge.
+/// SwiftUI helper to move the hosting window with a drag; no snapping.
 struct FloatingPanelModifier: ViewModifier {
     @State private var window: NSWindow?
     @State private var initialOrigin: NSPoint = .zero
@@ -26,35 +26,8 @@ struct FloatingPanelModifier: ViewModifier {
                     .onEnded { _ in
                         guard let window else { return }
                         initialOrigin = .zero
-                        snap(window: window)
                     }
             )
-    }
-
-    private func snap(window: NSWindow) {
-        guard let screen = window.screen ?? NSScreen.main else { return }
-        let frame = window.frame
-        let screenFrame = screen.visibleFrame
-
-        let left = abs(frame.minX - screenFrame.minX)
-        let right = abs(screenFrame.maxX - frame.maxX)
-        let top = abs(screenFrame.maxY - frame.maxY)
-        let bottom = abs(frame.minY - screenFrame.minY)
-
-        let nearest = min(left, right, top, bottom)
-        var origin = frame.origin
-
-        if nearest == left {
-            origin.x = screenFrame.minX
-        } else if nearest == right {
-            origin.x = screenFrame.maxX - frame.width
-        } else if nearest == top {
-            origin.y = screenFrame.maxY - frame.height
-        } else {
-            origin.y = screenFrame.minY
-        }
-
-        window.setFrameOrigin(origin)
     }
 }
 
@@ -78,7 +51,7 @@ private struct WindowResolver: NSViewRepresentable {
 }
 
 extension View {
-    func floatingPanelSnap() -> some View {
+    func floatingPanelDraggable() -> some View {
         modifier(FloatingPanelModifier())
     }
 }

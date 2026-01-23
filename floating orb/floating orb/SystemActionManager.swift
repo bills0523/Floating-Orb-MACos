@@ -11,6 +11,17 @@ final class SystemActionManager {
         runAppleScript("tell application \"System Events\" to key code 103")
     }
 
+    func openFinder() {
+        runAppleScript("""
+        tell application "Finder"
+            if (count of windows) is 0 then
+                make new Finder window to home
+            end if
+            activate
+        end tell
+        """)
+    }
+
     func toggleDoNotDisturb() {
         // Expect a Shortcuts shortcut named "Toggle Focus" or fallback to the Control+Shift+F15 shortcut.
         if !runShell("/usr/bin/shortcuts", arguments: ["run", "Toggle Focus"]) {
@@ -20,6 +31,28 @@ final class SystemActionManager {
 
     func runCustomCommand() {
         _ = runShell("/bin/zsh", arguments: ["-c", "echo 'Custom command placeholder executed'"])
+    }
+
+    func volumeUp(step: Int = 6) {
+        runAppleScript("""
+        set ovol to output volume of (get volume settings)
+        if ovol > (100 - \(step)) then
+            set volume output volume 100
+        else
+            set volume output volume (ovol + \(step))
+        end if
+        """)
+    }
+
+    func volumeDown(step: Int = 6) {
+        runAppleScript("""
+        set ovol to output volume of (get volume settings)
+        if ovol < \(step) then
+            set volume output volume 0
+        else
+            set volume output volume (ovol - \(step))
+        end if
+        """)
     }
 
     @discardableResult
@@ -41,8 +74,7 @@ final class SystemActionManager {
     }
 
     private func runAppleScript(_ script: String) {
-        guard let data = script.data(using: .utf8),
-              let scriptObject = NSAppleScript(data: data) else {
+        guard let scriptObject = NSAppleScript(source: script) else {
             NSLog("SystemActionManager could not build AppleScript")
             return
         }

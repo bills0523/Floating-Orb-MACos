@@ -16,7 +16,8 @@ final class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
 
         isFloatingPanel = true
         level = .floating
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .moveToActiveSpace]
+        // Avoid conflicting behaviors: keep panel on all spaces and as fullscreen auxiliary.
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         hidesOnDeactivate = false
         isMovableByWindowBackground = true
         hasShadow = true
