@@ -33,26 +33,24 @@ final class SystemActionManager {
         _ = runShell("/bin/zsh", arguments: ["-c", "echo 'Custom command placeholder executed'"])
     }
 
-    func volumeUp(step: Int = 6) {
-        runAppleScript("""
-        set ovol to output volume of (get volume settings)
-        if ovol > (100 - \(step)) then
-            set volume output volume 100
-        else
-            set volume output volume (ovol + \(step))
-        end if
-        """)
+    func volumeUp(step: Int = 1) {
+        setVolume(delta: step)
     }
 
-    func volumeDown(step: Int = 6) {
-        runAppleScript("""
+    func volumeDown(step: Int = 1) {
+        setVolume(delta: -step)
+    }
+
+    private func setVolume(delta: Int) {
+        // Use osascript to avoid CFPlugin factory warnings from NSAppleScript.
+        let script = """
         set ovol to output volume of (get volume settings)
-        if ovol < \(step) then
-            set volume output volume 0
-        else
-            set volume output volume (ovol - \(step))
-        end if
-        """)
+        set nvol to ovol + \(delta)
+        if nvol > 100 then set nvol to 100
+        if nvol < 0 then set nvol to 0
+        set volume output volume nvol
+        """
+        _ = runShell("/usr/bin/osascript", arguments: ["-e", script])
     }
 
     @discardableResult
