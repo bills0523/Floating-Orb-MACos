@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI // for move(fromOffsets:toOffset:)
 
 struct OrbAction: Identifiable, Codable, Equatable {
     enum Kind: String, Codable {

@@ -24,8 +24,9 @@ struct FloatingPanelModifier: ViewModifier {
                         window.setFrameOrigin(target)
                     }
                     .onEnded { _ in
-                        guard let window else { return }
-                        initialOrigin = .zero
+                        if window != nil {
+                            initialOrigin = .zero
+                        }
                     }
             )
     }
