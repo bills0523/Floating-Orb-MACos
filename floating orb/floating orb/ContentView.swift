@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var actionStore: ActionStore
     @State private var isExpanded = false
+    @State private var showingEditor = false
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -40,23 +42,10 @@ struct ContentView: View {
         VStack(spacing: 16) {
             header
             LazyVGrid(columns: columns, spacing: 12) {
-                actionButton(systemName: "rectangle.3.offgrid", title: "Desktop") {
-                    SystemActionManager.shared.goHome()
-                }
-                actionButton(systemName: "moon.zzz", title: "Focus") {
-                    SystemActionManager.shared.toggleDoNotDisturb()
-                }
-                actionButton(systemName: "terminal", title: "Command") {
-                    SystemActionManager.shared.runCustomCommand()
-                }
-                actionButton(systemName: "folder", title: "Finder") {
-                    SystemActionManager.shared.openFinder()
-                }
-                actionButton(systemName: "speaker.wave.2", title: "Vol Up") {
-                    SystemActionManager.shared.volumeUp()
-                }
-                actionButton(systemName: "speaker.wave.1", title: "Vol Down") {
-                    SystemActionManager.shared.volumeDown()
+                ForEach(actionStore.enabledActions) { action in
+                    actionButton(systemName: action.systemImage, title: action.title) {
+                        perform(action)
+                    }
                 }
                 actionButton(systemName: "xmark.circle", title: "Close") {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
@@ -67,6 +56,7 @@ struct ContentView: View {
             Spacer(minLength: 0)
         }
         .padding(20)
+        .sheet(isPresented: $showingEditor) { editorSheet }
     }
 
     private var header: some View {
@@ -74,9 +64,13 @@ struct ContentView: View {
             Text("Floating Orb")
                 .font(.system(size: 16, weight: .semibold))
             Spacer()
-            Text("v1.0")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
+            Button {
+                showingEditor = true
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -92,6 +86,49 @@ struct ContentView: View {
             .padding(10)
             .background(.thinMaterial.opacity(0.65))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+
+    private func perform(_ action: OrbAction) {
+        let manager = SystemActionManager.shared
+        switch action.kind {
+        case .goHome: manager.goHome()
+        case .focus: manager.toggleDoNotDisturb()
+        case .command: manager.runCustomCommand()
+        case .finder: manager.openFinder()
+        case .volumeUp: manager.volumeUp()
+        case .volumeDown: manager.volumeDown()
+        }
+    }
+
+    private var editorSheet: some View {
+        NavigationView {
+            List {
+                ForEach($actionStore.actions) { $action in
+                    HStack {
+                        Toggle(isOn: $action.isEnabled) {
+                            HStack(spacing: 10) {
+                                Image(systemName: action.systemImage)
+                                Text(action.title)
+                            }
+                        }
+                        .toggleStyle(.switch)
+                    }
+                }
+                .onMove { indices, newOffset in
+                    actionStore.move(from: indices, to: newOffset)
+                }
+            }
+            .navigationTitle("Actions")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Done") { showingEditor = false }
+                }
+                ToolbarItem(placement: .automatic) {
+                    EditButton()
+                }
+            }
+            .frame(minWidth: 320, minHeight: 420)
         }
     }
 }

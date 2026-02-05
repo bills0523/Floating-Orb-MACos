@@ -20,9 +20,11 @@ struct FloatingOrbApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: FloatingPanel<ContentView>?
+    private let actionStore = ActionStore()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let content = ContentView()
+            .environmentObject(actionStore)
         panel = FloatingPanel(content: content)
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

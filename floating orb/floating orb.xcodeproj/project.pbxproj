@@ -13,6 +13,7 @@
 		5A2BF6852F2137A50043A2BE /* FloatingPanelModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanelModifier.swift; sourceTree = "<group>"; };
 		5A2BF6862F2137A50043A2BE /* SystemActionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemActionManager.swift; sourceTree = "<group>"; };
 		5A2BF6872F2137A50043A2BE /* floating_orbApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = floating_orbApp.swift; sourceTree = "<group>"; };
+		5A2BF6902F2600000043A2BE /* ActionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionStore.swift; sourceTree = "<group>"; };
 		5A2BF6882F2137A50043A2BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -22,6 +23,7 @@
 			path = "floating orb";
 			sourceTree = "<group>";
 			children = (
+				5A2BF6902F2600000043A2BE /* ActionStore.swift */,
 				5A2BF6872F2137A50043A2BE /* floating_orbApp.swift */,
 				5A2BF6832F2137A50043A2BE /* ContentView.swift */,
 				5A2BF6842F2137A50043A2BE /* FloatingPanel.swift */,
@@ -134,6 +136,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A2BF6912F2600000043A2BE /* ActionStore.swift in Sources */,
 				5A2BF68A2F2137A50043A2BE /* floating_orbApp.swift in Sources */,
 				5A2BF68B2F2137A50043A2BE /* ContentView.swift in Sources */,
 				5A2BF68C2F2137A50043A2BE /* FloatingPanel.swift in Sources */,
@@ -151,6 +154,7 @@
 		5A2BF68D2F2137A50043A2BE /* FloatingPanelModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6852F2137A50043A2BE /* FloatingPanelModifier.swift */; };
 		5A2BF68E2F2137A50043A2BE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A2BF6882F2137A50043A2BE /* Assets.xcassets */; };
 		5A2BF68F2F2137A50043A2BE /* SystemActionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6862F2137A50043A2BE /* SystemActionManager.swift */; };
+		5A2BF6912F2600000043A2BE /* ActionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6902F2600000043A2BE /* ActionStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin XCBuildConfiguration section */
