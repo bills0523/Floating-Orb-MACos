@@ -27,10 +27,6 @@ struct ContentView: View {
         }
         .frame(minWidth: 72, minHeight: 72)
         .contentShape(Rectangle())
-        .highPriorityGesture(
-            DragGesture(minimumDistance: 1)
-                .onChanged { _ in }
-        )
         .onTapGesture(count: 2) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0.1)) {
                 isExpanded.toggle()

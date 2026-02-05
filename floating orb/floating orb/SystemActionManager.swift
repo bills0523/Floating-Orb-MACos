@@ -8,7 +8,9 @@ final class SystemActionManager {
 
     func goHome() {
         // Show Desktop (F11) via AppleScript so we don't depend on private APIs.
-        runAppleScript("tell application \"System Events\" to key code 103")
+        runAppleScript("""
+        tell application "System Events" to key code 103
+        """)
     }
 
     func openFinder() {
@@ -25,7 +27,9 @@ final class SystemActionManager {
     func toggleDoNotDisturb() {
         // Expect a Shortcuts shortcut named "Toggle Focus" or fallback to the Control+Shift+F15 shortcut.
         if !runShell("/usr/bin/shortcuts", arguments: ["run", "Toggle Focus"]) {
-            runAppleScript("tell application \"System Events\" to key code 107 using {control down, shift down}")
+            runAppleScript("""
+            tell application "System Events" to key code 107 using {control down, shift down}
+            """)
         }
     }
 
@@ -72,14 +76,6 @@ final class SystemActionManager {
     }
 
     private func runAppleScript(_ script: String) {
-        guard let scriptObject = NSAppleScript(source: script) else {
-            NSLog("SystemActionManager could not build AppleScript")
-            return
-        }
-        var errorDict: NSDictionary?
-        scriptObject.executeAndReturnError(&errorDict)
-        if let errorDict {
-            NSLog("SystemActionManager AppleScript error: \(errorDict)")
-        }
+        _ = runShell("/usr/bin/osascript", arguments: ["-e", script])
     }
 }
