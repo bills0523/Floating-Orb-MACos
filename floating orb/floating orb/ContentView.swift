@@ -4,7 +4,6 @@ struct ContentView: View {
     @EnvironmentObject var actionStore: ActionStore
     @State private var isExpanded = false
     @State private var showingEditor = false
-    @State private var editMode: EditMode = .inactive
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -114,10 +113,9 @@ struct ContentView: View {
                             }
                         }
                         .toggleStyle(.switch)
+                        Spacer()
+                        moveButtons(for: action)
                     }
-                }
-                .onMove { indices, newOffset in
-                    actionStore.move(from: indices, to: newOffset)
                 }
             }
             .navigationTitle("Actions")
@@ -125,14 +123,37 @@ struct ContentView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Done") { showingEditor = false }
                 }
-                ToolbarItem(placement: .automatic) {
-                    Button(editMode == .active ? "Done Moving" : "Reorder") {
-                        editMode = editMode == .active ? .inactive : .active
-                    }
-                }
             }
             .frame(minWidth: 320, minHeight: 420)
-            .environment(\.editMode, $editMode)
+        }
+    }
+
+    private func moveButtons(for action: OrbAction) -> some View {
+        HStack(spacing: 6) {
+            Button {
+                move(action, offset: -1)
+            } label: {
+                Image(systemName: "chevron.up")
+            }
+            .buttonStyle(.borderless)
+
+            Button {
+                move(action, offset: 1)
+            } label: {
+                Image(systemName: "chevron.down")
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private func move(_ action: OrbAction, offset: Int) {
+        guard let index = actionStore.actions.firstIndex(of: action) else { return }
+        let newIndex = max(0, min(actionStore.actions.count - 1, index + offset))
+        if newIndex != index {
+            var actions = actionStore.actions
+            let item = actions.remove(at: index)
+            actions.insert(item, at: newIndex)
+            actionStore.actions = actions
         }
     }
 }
