@@ -4,6 +4,7 @@ struct ContentView: View {
     @EnvironmentObject var actionStore: ActionStore
     @State private var isExpanded = false
     @State private var showingEditor = false
+    @State private var editMode: EditMode = .inactive
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -125,10 +126,13 @@ struct ContentView: View {
                     Button("Done") { showingEditor = false }
                 }
                 ToolbarItem(placement: .automatic) {
-                    EditButton()
+                    Button(editMode == .active ? "Done Moving" : "Reorder") {
+                        editMode = editMode == .active ? .inactive : .active
+                    }
                 }
             }
             .frame(minWidth: 320, minHeight: 420)
+            .environment(\.editMode, $editMode)
         }
     }
 }
