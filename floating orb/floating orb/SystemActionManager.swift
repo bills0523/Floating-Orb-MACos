@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CoreAudio
 
 /// Runs lightweight system actions and shell commands from SwiftUI.
 final class SystemActionManager {
@@ -38,18 +39,28 @@ final class SystemActionManager {
     }
 
     func volumeUp(step: Int = 1) {
-        setVolume(delta: step)
+        setVolume(delta: Float(step) / 100.0)
     }
 
     func volumeDown(step: Int = 1) {
-        setVolume(delta: -step)
+        setVolume(delta: -Float(step) / 100.0)
     }
 
-    private func setVolume(delta: Int) {
-        // Use osascript to avoid CFPlugin factory warnings from NSAppleScript.
+    private func setVolume(delta: Float) {
+        guard let deviceID = defaultOutputDevice() else {
+            NSLog("SystemActionManager: no output device")
+            return
+        }
+
+        var volume = currentVolume(deviceID: deviceID)
+        let newVolume = max(0.0, min(1.0, volume + delta))
+        if setVolume(deviceID: deviceID, value: newVolume) {
+            return
+        }
+        // Fallback to AppleScript/osascript if CoreAudio fails.
         let script = """
         set ovol to output volume of (get volume settings)
-        set nvol to ovol + \(delta)
+        set nvol to ovol + \(Int(delta * 100))
         if nvol > 100 then set nvol to 100
         if nvol < 0 then set nvol to 0
         set volume output volume nvol
@@ -78,4 +89,50 @@ final class SystemActionManager {
     private func runAppleScript(_ script: String) {
         _ = runShell("/usr/bin/osascript", arguments: ["-e", script])
     }
+}
+
+// MARK: - CoreAudio helpers
+
+private func defaultOutputDevice() -> AudioObjectID? {
+    var deviceID = AudioObjectID(bitPattern: 0)
+    var propertyAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var size = UInt32(MemoryLayout<AudioObjectID>.size)
+    let status = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),
+                                            &propertyAddress,
+                                            0,
+                                            nil,
+                                            &size,
+                                            &deviceID)
+    return (status == noErr && deviceID != AudioObjectID(kAudioObjectUnknown)) ? deviceID : nil
+}
+
+private func currentVolume(deviceID: AudioObjectID) -> Float {
+    var propertyAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwareServiceDeviceProperty_VirtualMasterVolume,
+        mScope: kAudioDevicePropertyScopeOutput,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var volume = Float32(0)
+    var size = UInt32(MemoryLayout<Float32>.size)
+    let status = AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &size, &volume)
+    if status != noErr {
+        return 0
+    }
+    return Float(volume)
+}
+
+private func setVolume(deviceID: AudioObjectID, value: Float) -> Bool {
+    var propertyAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwareServiceDeviceProperty_VirtualMasterVolume,
+        mScope: kAudioDevicePropertyScopeOutput,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var vol = Float32(value)
+    let size = UInt32(MemoryLayout<Float32>.size)
+    let status = AudioObjectSetPropertyData(deviceID, &propertyAddress, 0, nil, size, &vol)
+    return status == noErr
 }

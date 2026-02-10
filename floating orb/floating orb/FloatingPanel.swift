@@ -10,7 +10,7 @@ final class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
         self.hostingController = NSHostingController(rootView: content)
 
         super.init(contentRect: contentRect,
-                   styleMask: [.borderless, .nonactivatingPanel],
+                   styleMask: [.borderless],
                    backing: .buffered,
                    defer: false)
 
@@ -32,7 +32,7 @@ final class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
         contentViewController = hostingController
     }
 
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
     // Keep the panel floating above everything else.
