@@ -39,22 +39,22 @@ final class SystemActionManager {
     }
 
     func volumeUp(step: Int = 1) {
-        setVolume(delta: Float(step) / 100.0)
+        adjustVolume(delta: Float(step) / 100.0)
     }
 
     func volumeDown(step: Int = 1) {
-        setVolume(delta: -Float(step) / 100.0)
+        adjustVolume(delta: -Float(step) / 100.0)
     }
 
-    private func setVolume(delta: Float) {
+    private func adjustVolume(delta: Float) {
         guard let deviceID = defaultOutputDevice() else {
             NSLog("SystemActionManager: no output device")
             return
         }
 
-        var volume = currentVolume(deviceID: deviceID)
+        let volume = currentVolume(deviceID: deviceID)
         let newVolume = max(0.0, min(1.0, volume + delta))
-        if setVolume(deviceID: deviceID, value: newVolume) {
+        if setDeviceVolume(deviceID: deviceID, value: newVolume) {
             return
         }
         // Fallback to AppleScript/osascript if CoreAudio fails.
@@ -112,7 +112,7 @@ private func defaultOutputDevice() -> AudioObjectID? {
 
 private func currentVolume(deviceID: AudioObjectID) -> Float {
     var propertyAddress = AudioObjectPropertyAddress(
-        mSelector: kAudioHardwareServiceDeviceProperty_VirtualMasterVolume,
+        mSelector: kAudioDevicePropertyVolumeScalar,
         mScope: kAudioDevicePropertyScopeOutput,
         mElement: kAudioObjectPropertyElementMain
     )
@@ -125,9 +125,9 @@ private func currentVolume(deviceID: AudioObjectID) -> Float {
     return Float(volume)
 }
 
-private func setVolume(deviceID: AudioObjectID, value: Float) -> Bool {
+private func setDeviceVolume(deviceID: AudioObjectID, value: Float) -> Bool {
     var propertyAddress = AudioObjectPropertyAddress(
-        mSelector: kAudioHardwareServiceDeviceProperty_VirtualMasterVolume,
+        mSelector: kAudioDevicePropertyVolumeScalar,
         mScope: kAudioDevicePropertyScopeOutput,
         mElement: kAudioObjectPropertyElementMain
     )
