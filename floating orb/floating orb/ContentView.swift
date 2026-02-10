@@ -1,9 +1,11 @@
 import SwiftUI
+import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var actionStore: ActionStore
     @State private var isExpanded = false
     @State private var showingEditor = false
+    @State private var window: NSWindow?
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -29,10 +31,12 @@ struct ContentView: View {
         }
         .frame(minWidth: 72, minHeight: 72)
         .contentShape(Rectangle())
+        .background(WindowCapture(window: $window))
         .onTapGesture(count: 2) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0.1)) {
                 isExpanded.toggle()
             }
+            resizeWindow(expanded: isExpanded)
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isExpanded)
         .floatingPanelDraggable()
@@ -42,7 +46,7 @@ struct ContentView: View {
         VStack(spacing: 16) {
             header
             LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(actionStore.enabledActions) { action in
+                ForEach(displayedActions) { action in
                     actionButton(systemName: action.systemImage, title: action.title) {
                         perform(action)
                     }
@@ -154,6 +158,29 @@ struct ContentView: View {
             let item = actions.remove(at: index)
             actions.insert(item, at: newIndex)
             actionStore.actions = actions
+        }
+    }
+
+    private var displayedActions: [OrbAction] {
+        let enabled = actionStore.enabledActions
+        return enabled.isEmpty ? OrbAction.default : enabled
+    }
+
+    private func resizeWindow(expanded: Bool) {
+        guard let window else { return }
+        let size = expanded ? NSSize(width: 340, height: 420) : NSSize(width: 90, height: 90)
+        window.setContentSize(size)
+    }
+
+    private struct WindowCapture: NSViewRepresentable {
+        @Binding var window: NSWindow?
+        func makeNSView(context: Context) -> NSView {
+            let view = NSView(frame: .zero)
+            DispatchQueue.main.async { self.window = view.window }
+            return view
+        }
+        func updateNSView(_ nsView: NSView, context: Context) {
+            DispatchQueue.main.async { self.window = nsView.window }
         }
     }
 }
