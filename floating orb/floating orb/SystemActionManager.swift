@@ -8,21 +8,15 @@ final class SystemActionManager {
     private init() {}
 
     func goHome() {
-        // Show Desktop (F11) via AppleScript so we don't depend on private APIs.
+        // Show Desktop (F11). Requires Accessibility permission.
         runAppleScript("""
         tell application "System Events" to key code 103
         """)
     }
 
     func openFinder() {
-        runAppleScript("""
-        tell application "Finder"
-            if (count of windows) is 0 then
-                make new Finder window to home
-            end if
-            activate
-        end tell
-        """)
+        // Use NSWorkspace to avoid AppleScript permissions.
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: NSHomeDirectory())
     }
 
     func toggleDoNotDisturb() {
@@ -54,18 +48,7 @@ final class SystemActionManager {
 
         let volume = currentVolume(deviceID: deviceID)
         let newVolume = max(0.0, min(1.0, volume + delta))
-        if setDeviceVolume(deviceID: deviceID, value: newVolume) {
-            return
-        }
-        // Fallback to AppleScript/osascript if CoreAudio fails.
-        let script = """
-        set ovol to output volume of (get volume settings)
-        set nvol to ovol + \(Int(delta * 100))
-        if nvol > 100 then set nvol to 100
-        if nvol < 0 then set nvol to 0
-        set volume output volume nvol
-        """
-        _ = runShell("/usr/bin/osascript", arguments: ["-e", script])
+        _ = setDeviceVolume(deviceID: deviceID, value: newVolume)
     }
 
     @discardableResult
