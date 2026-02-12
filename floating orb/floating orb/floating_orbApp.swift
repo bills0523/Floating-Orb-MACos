@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import ApplicationServices
 
 @main
 struct FloatingOrbApp: App {
@@ -23,10 +24,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let actionStore = ActionStore()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        requestAccessibility()
+
         let content = AnyView(ContentView()
             .environmentObject(actionStore))
         panel = FloatingPanel(content: content)
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func requestAccessibility() {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        let trusted = AXIsProcessTrustedWithOptions(options)
+        if !trusted {
+            NSLog("Accessibility permission not granted yet; prompting user.")
+        }
     }
 }
