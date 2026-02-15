@@ -4,7 +4,7 @@ import AppKit
 /// SwiftUI helper to move the hosting window with a drag; no snapping.
 struct FloatingPanelModifier: ViewModifier {
     @State private var window: NSWindow?
-    @State private var initialOrigin: NSPoint = .zero
+    @State private var dragStartOrigin: NSPoint?
 
     func body(content: Content) -> some View {
         content
@@ -12,21 +12,20 @@ struct FloatingPanelModifier: ViewModifier {
                 window = resolvedWindow
             })
             .gesture(
-                DragGesture(minimumDistance: 1)
+                DragGesture(minimumDistance: 4)
                     .onChanged { value in
                         guard let window else { return }
-                        if initialOrigin == .zero {
-                            initialOrigin = window.frame.origin
+                        if dragStartOrigin == nil {
+                            dragStartOrigin = window.frame.origin
                         }
+                        guard let origin = dragStartOrigin else { return }
                         // SwiftUI drag y+ is down; AppKit window y+ is up.
-                        let target = NSPoint(x: initialOrigin.x + value.translation.width,
-                                             y: initialOrigin.y - value.translation.height)
+                        let target = NSPoint(x: origin.x + value.translation.width,
+                                             y: origin.y - value.translation.height)
                         window.setFrameOrigin(target)
                     }
                     .onEnded { _ in
-                        if window != nil {
-                            initialOrigin = .zero
-                        }
+                        dragStartOrigin = nil
                     }
             )
     }

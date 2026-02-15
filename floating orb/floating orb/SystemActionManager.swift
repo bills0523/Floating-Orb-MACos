@@ -17,14 +17,28 @@ final class SystemActionManager {
     }
 
     func toggleDoNotDisturb() {
-        // Direct fallback path (no Shortcuts dependency).
-        // Requires Accessibility permission.
-        _ = runAppleScript("""
-        tell application "System Events" to launch
-        delay 0.15
+        // Try toggling Focus from Control Center first (no custom shortcut needed).
+        if runAppleScript("""
         tell application "System Events"
-            key code 107 using {control down, shift down}
+            tell process "ControlCenter"
+                set frontmost to true
+                click (first menu bar item of menu bar 1 whose description contains "Control Center")
+                delay 0.2
+                try
+                    click (first checkbox of first window whose name contains "Control Center")
+                on error
+                    click (first button of first window whose name contains "Control Center" whose name contains "Focus")
+                end try
+                key code 53
+            end tell
         end tell
+        """) {
+            return
+        }
+
+        // Final fallback: keyboard shortcut path if configured by user.
+        _ = runAppleScript("""
+        tell application "System Events" to key code 107 using {control down, shift down}
         """)
     }
 
@@ -33,20 +47,21 @@ final class SystemActionManager {
     }
 
     func volumeUp(step: Int = 1) {
-        adjustVolume(deltaPercent: max(1, step))
+        pressVolumeKey(keyCode: 72, times: max(1, step))
     }
 
     func volumeDown(step: Int = 1) {
-        adjustVolume(deltaPercent: -max(1, step))
+        pressVolumeKey(keyCode: 73, times: max(1, step))
     }
 
-    private func adjustVolume(deltaPercent: Int) {
+    private func pressVolumeKey(keyCode: Int, times: Int) {
         _ = runAppleScript("""
-        set ovol to output volume of (get volume settings)
-        set nvol to ovol + \(deltaPercent)
-        if nvol > 100 then set nvol to 100
-        if nvol < 0 then set nvol to 0
-        set volume output volume nvol
+        tell application "System Events"
+            repeat \(times) times
+                key code \(keyCode)
+                delay 0.02
+            end repeat
+        end tell
         """)
     }
 
