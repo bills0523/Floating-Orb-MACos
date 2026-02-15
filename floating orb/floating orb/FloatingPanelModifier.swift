@@ -5,11 +5,14 @@ import AppKit
 struct FloatingPanelModifier: ViewModifier {
     @State private var window: NSWindow?
     @State private var dragStartOrigin: NSPoint?
+    @State private var didCaptureWindow = false
 
     func body(content: Content) -> some View {
         content
             .background(WindowResolver { resolvedWindow in
+                guard !didCaptureWindow, let resolvedWindow else { return }
                 window = resolvedWindow
+                didCaptureWindow = true
             })
             .gesture(
                 DragGesture(minimumDistance: 4)
@@ -45,7 +48,9 @@ private struct WindowResolver: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
-            onResolve(nsView.window)
+            if nsView.window != nil {
+                onResolve(nsView.window)
+            }
         }
     }
 }
