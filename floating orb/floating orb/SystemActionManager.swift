@@ -17,21 +17,11 @@ final class SystemActionManager {
     }
 
     func toggleDoNotDisturb() {
-        // First try user shortcuts by common names.
-        let candidates = [
-            "Toggle Focus",
-            "Toggle Do Not Disturb",
-            "Turn On Do Not Disturb",
-            "Turn Off Do Not Disturb"
-        ]
-
-        for name in candidates where runShell("/usr/bin/shortcuts", arguments: ["run", name]) {
-            return
-        }
-
-        // Fallback: trigger the system shortcut key path via System Events.
-        // This requires Accessibility permission and depends on user shortcut mapping.
+        // Direct fallback path (no Shortcuts dependency).
+        // Requires Accessibility permission.
         _ = runAppleScript("""
+        tell application "System Events" to launch
+        delay 0.15
         tell application "System Events"
             key code 107 using {control down, shift down}
         end tell
@@ -65,11 +55,20 @@ final class SystemActionManager {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: launchPath)
         process.arguments = arguments
+        let stderrPipe = Pipe()
+        process.standardError = stderrPipe
 
         do {
             try process.run()
             process.waitUntilExit()
-            return process.terminationStatus == 0
+            let success = process.terminationStatus == 0
+            if !success {
+                let data = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                if let err = String(data: data, encoding: .utf8), !err.isEmpty {
+                    NSLog("SystemActionManager command error (\(launchPath)): \(err)")
+                }
+            }
+            return success
         } catch {
             NSLog("SystemActionManager shell error: \(error)")
             return false
