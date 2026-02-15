@@ -44,23 +44,26 @@ struct ContentView: View {
 
     private var contentPanel: some View {
         VStack(spacing: 16) {
-            header
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(displayedActions) { action in
-                    actionButton(systemName: action.systemImage, title: action.title) {
-                        perform(action)
+            if showingEditor {
+                editorPanel
+            } else {
+                header
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(displayedActions) { action in
+                        actionButton(systemName: action.systemImage, title: action.title) {
+                            perform(action)
+                        }
+                    }
+                    actionButton(systemName: "xmark.circle", title: "Close") {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            isExpanded = false
+                        }
                     }
                 }
-                actionButton(systemName: "xmark.circle", title: "Close") {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        isExpanded = false
-                    }
-                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .padding(20)
-        .sheet(isPresented: $showingEditor) { editorSheet }
     }
 
     private var header: some View {
@@ -69,7 +72,9 @@ struct ContentView: View {
                 .font(.system(size: 16, weight: .semibold))
             Spacer()
             Button {
-                showingEditor = true
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showingEditor = true
+                }
             } label: {
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 14, weight: .semibold))
@@ -105,30 +110,42 @@ struct ContentView: View {
         }
     }
 
-    private var editorSheet: some View {
-        NavigationView {
-            List {
-                ForEach($actionStore.actions) { $action in
-                    HStack {
-                        Toggle(isOn: $action.isEnabled) {
-                            HStack(spacing: 10) {
-                                Image(systemName: action.systemImage)
-                                Text(action.title)
+    private var editorPanel: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Customize Actions")
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+                Button("Done") {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showingEditor = false
+                    }
+                }
+                .buttonStyle(.borderless)
+            }
+
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach($actionStore.actions) { $action in
+                        HStack(spacing: 10) {
+                            Toggle(isOn: $action.isEnabled) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: action.systemImage)
+                                    Text(action.title)
+                                        .font(.system(size: 13, weight: .medium))
+                                }
                             }
+                            .toggleStyle(.switch)
+                            Spacer()
+                            moveButtons(for: action)
                         }
-                        .toggleStyle(.switch)
-                        Spacer()
-                        moveButtons(for: action)
+                        .padding(8)
+                        .background(.thinMaterial.opacity(0.4))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                 }
             }
-            .navigationTitle("Actions")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Done") { showingEditor = false }
-                }
-            }
-            .frame(minWidth: 320, minHeight: 420)
+            Spacer(minLength: 0)
         }
     }
 
