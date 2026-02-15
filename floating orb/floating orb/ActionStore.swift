@@ -19,7 +19,6 @@ struct OrbAction: Identifiable, Codable, Equatable {
     var kind: Kind
 
     static let `default`: [OrbAction] = [
-        OrbAction(id: "desktop", title: "Desktop", systemImage: "rectangle.3.offgrid", isEnabled: true, kind: .goHome),
         OrbAction(id: "focus", title: "Focus", systemImage: "moon.zzz", isEnabled: true, kind: .focus),
         OrbAction(id: "command", title: "Command", systemImage: "terminal", isEnabled: true, kind: .command),
         OrbAction(id: "finder", title: "Finder", systemImage: "folder", isEnabled: true, kind: .finder),
@@ -38,14 +37,16 @@ final class ActionStore: ObservableObject {
     init() {
         if let data = UserDefaults.standard.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([OrbAction].self, from: data) {
-            actions = decoded
+            // Migration: remove legacy Desktop action.
+            let migrated = decoded.filter { $0.kind != .goHome }
+            actions = migrated.isEmpty ? OrbAction.default : migrated
         } else {
             actions = OrbAction.default
         }
     }
 
     var enabledActions: [OrbAction] {
-        actions.filter { $0.isEnabled }
+        actions.filter { $0.isEnabled && $0.kind != .goHome }
     }
 
     func move(from offsets: IndexSet, to destination: Int) {

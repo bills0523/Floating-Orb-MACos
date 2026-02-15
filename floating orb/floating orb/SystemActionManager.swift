@@ -19,12 +19,14 @@ final class SystemActionManager {
     }
 
     func toggleDoNotDisturb() {
-        // Preferred path: user-created Shortcuts action named "Toggle Focus".
-        if runShell("/usr/bin/shortcuts", arguments: ["run", "Toggle Focus"]) {
-            return
+        // Run user Shortcuts directly; no settings fallback.
+        let candidates = ["Toggle Focus", "Toggle Do Not Disturb", "Turn On Do Not Disturb", "Turn Off Do Not Disturb"]
+        for name in candidates {
+            if runShell("/usr/bin/shortcuts", arguments: ["run", name]) {
+                return
+            }
         }
-        // Fallback: open Focus settings so user can toggle quickly.
-        _ = runShell("/usr/bin/open", arguments: ["x-apple.systempreferences:com.apple.preference.notifications"])
+        NSLog("SystemActionManager: no Do Not Disturb shortcut found. Create one in Shortcuts app.")
     }
 
     func runCustomCommand() {
@@ -43,15 +45,13 @@ final class SystemActionManager {
     private func adjustVolume(delta: Float) {
         guard let deviceID = defaultOutputDevice() else {
             NSLog("SystemActionManager: no output device")
-            // Fallback for devices that do not expose CoreAudio scalar control.
-            runVolumeAppleScript(deltaPercent: Int(delta * 100))
             return
         }
 
         let volume = currentVolume(deviceID: deviceID)
         let newVolume = max(0.0, min(1.0, volume + delta))
         if !setDeviceVolume(deviceID: deviceID, value: newVolume) {
-            runVolumeAppleScript(deltaPercent: Int(delta * 100))
+            NSLog("SystemActionManager: failed to set output volume via CoreAudio")
         }
     }
 
@@ -73,16 +73,6 @@ final class SystemActionManager {
         }
     }
 
-    private func runVolumeAppleScript(deltaPercent: Int) {
-        let script = """
-        set ovol to output volume of (get volume settings)
-        set nvol to ovol + \(deltaPercent)
-        if nvol > 100 then set nvol to 100
-        if nvol < 0 then set nvol to 0
-        set volume output volume nvol
-        """
-        _ = runShell("/usr/bin/osascript", arguments: ["-e", script])
-    }
 }
 
 // MARK: - CoreAudio helpers
@@ -105,26 +95,61 @@ private func defaultOutputDevice() -> AudioObjectID? {
 }
 
 private func currentVolume(deviceID: AudioObjectID) -> Float {
-    var propertyAddress = AudioObjectPropertyAddress(
-        mSelector: kAudioDevicePropertyVolumeScalar,
-        mScope: kAudioDevicePropertyScopeOutput,
-        mElement: kAudioObjectPropertyElementMain
-    )
-    var volume = Float32(0)
-    var size = UInt32(MemoryLayout<Float32>.size)
-    let status = AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &size, &volume)
-    if status != noErr {
-        return 0
+    if let vol = readVolume(deviceID: deviceID, element: kAudioObjectPropertyElementMain) {
+        return vol
     }
-    return Float(volume)
+    let left = readVolume(deviceID: deviceID, element: 1)
+    let right = readVolume(deviceID: deviceID, element: 2)
+    if let left, let right {
+        return (left + right) / 2.0
+    }
+    if let left {
+        return left
+    }
+    if let right {
+        return right
+    }
+    return 0
 }
 
 private func setDeviceVolume(deviceID: AudioObjectID, value: Float) -> Bool {
+    if writeVolume(deviceID: deviceID, element: kAudioObjectPropertyElementMain, value: value) {
+        return true
+    }
+    var wroteAny = false
+    if writeVolume(deviceID: deviceID, element: 1, value: value) {
+        wroteAny = true
+    }
+    if writeVolume(deviceID: deviceID, element: 2, value: value) {
+        wroteAny = true
+    }
+    return wroteAny
+}
+
+private func readVolume(deviceID: AudioObjectID, element: UInt32) -> Float? {
     var propertyAddress = AudioObjectPropertyAddress(
         mSelector: kAudioDevicePropertyVolumeScalar,
         mScope: kAudioDevicePropertyScopeOutput,
-        mElement: kAudioObjectPropertyElementMain
+        mElement: element
     )
+    if !AudioObjectHasProperty(deviceID, &propertyAddress) {
+        return nil
+    }
+    var volume = Float32(0)
+    var size = UInt32(MemoryLayout<Float32>.size)
+    let status = AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &size, &volume)
+    return status == noErr ? Float(volume) : nil
+}
+
+private func writeVolume(deviceID: AudioObjectID, element: UInt32, value: Float) -> Bool {
+    var propertyAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyVolumeScalar,
+        mScope: kAudioDevicePropertyScopeOutput,
+        mElement: element
+    )
+    if !AudioObjectHasProperty(deviceID, &propertyAddress) {
+        return false
+    }
     var vol = Float32(value)
     let size = UInt32(MemoryLayout<Float32>.size)
     let status = AudioObjectSetPropertyData(deviceID, &propertyAddress, 0, nil, size, &vol)
