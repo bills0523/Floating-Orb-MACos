@@ -18,26 +18,26 @@ final class SystemActionManager {
 
     func toggleDoNotDisturb() {
         // Toggle Do Not Disturb via Control Center UI scripting.
-        // This requires Accessibility permission and may vary slightly by macOS version.
+        // This requires Accessibility permission and UI labels may vary by macOS/localization.
         _ = runAppleScript("""
         tell application "System Events"
             tell process "ControlCenter"
                 set frontmost to true
-                click (first menu bar item of menu bar 1 whose description contains "Control Center")
+                click (first menu bar item of menu bar 1 whose description contains "Control Center" or description contains "control center")
                 delay 0.25
                 try
-                    click (first button of first window whose name contains "Control Center" whose name contains "Focus")
+                    click (first button of window 1 whose name contains "Focus")
                 on error
-                    click (first button of first window whose name contains "Control Center" whose description contains "Focus")
+                    click (first button of window 1 whose description contains "Focus")
                 end try
-                delay 0.15
+                delay 0.2
                 try
-                    click (first checkbox of first window whose title contains "Focus" whose description contains "Do Not Disturb")
+                    click (first checkbox of window 1 whose name contains "Do Not Disturb")
                 on error
                     try
-                        click (first button of first window whose title contains "Focus" whose name contains "Do Not Disturb")
+                        click (first button of window 1 whose name contains "Do Not Disturb")
                     on error
-                        click (first button of first window whose name contains "Do Not Disturb")
+                        click (first UI element of window 1 whose description contains "Do Not Disturb")
                     end try
                 end try
                 key code 53
@@ -50,22 +50,29 @@ final class SystemActionManager {
         _ = runShell("/usr/bin/open", arguments: ["-a", "Terminal"])
     }
 
-    func volumeUp(step: Int = 1) {
+    func volumeUp(step: Int = 6) {
         adjustVolume(deltaPercent: max(1, step))
     }
 
-    func volumeDown(step: Int = 1) {
+    func volumeDown(step: Int = 6) {
         adjustVolume(deltaPercent: -max(1, step))
     }
 
     private func adjustVolume(deltaPercent: Int) {
-        _ = runAppleScript("""
+        let didSet = runAppleScript("""
         set currentVolume to output volume of (get volume settings)
         set targetVolume to currentVolume + \(deltaPercent)
         if targetVolume > 100 then set targetVolume to 100
         if targetVolume < 0 then set targetVolume to 0
         set volume output volume targetVolume
         """)
+        if !didSet {
+            _ = runAppleScript("""
+            tell application "System Events"
+                key code \(deltaPercent > 0 ? 72 : 73)
+            end tell
+            """)
+        }
     }
 
     @discardableResult
