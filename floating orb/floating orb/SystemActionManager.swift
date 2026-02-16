@@ -28,7 +28,15 @@ final class SystemActionManager {
                 try
                     click (first button of window 1 whose name contains "Focus")
                 on error
-                    click (first button of window 1 whose description contains "Focus")
+                    try
+                        click (first checkbox of window 1 whose name contains "Focus")
+                    on error
+                        try
+                            click (first button of window 1 whose description contains "Focus")
+                        on error
+                            click (first UI element of window 1 whose description contains "Focus")
+                        end try
+                    end try
                 end try
                 delay 0.2
                 try
@@ -37,7 +45,11 @@ final class SystemActionManager {
                     try
                         click (first button of window 1 whose name contains "Do Not Disturb")
                     on error
-                        click (first UI element of window 1 whose description contains "Do Not Disturb")
+                        try
+                            click (first button of window 1 whose description contains "Do Not Disturb")
+                        on error
+                            click (first UI element of window 1 whose description contains "Do Not Disturb")
+                        end try
                     end try
                 end try
                 key code 53
@@ -65,12 +77,15 @@ final class SystemActionManager {
         if targetVolume > 100 then set targetVolume to 100
         if targetVolume < 0 then set targetVolume to 0
         set volume output volume targetVolume
+        display notification ("Current volume: " & targetVolume & "%") with title "Floating Orb"
         """)
         if !didSet {
             _ = runAppleScript("""
             tell application "System Events"
                 key code \(deltaPercent > 0 ? 72 : 73)
             end tell
+            set volumeValue to output volume of (get volume settings)
+            display notification ("Current volume: " & volumeValue & "%") with title "Floating Orb"
             """)
         }
     }
