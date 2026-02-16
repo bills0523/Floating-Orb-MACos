@@ -24,7 +24,7 @@ final class SystemActionManager {
     }
 
     func toggleDoNotDisturb() {
-        guard ensureAccessibilityPermission(prompt: true) else {
+        guard ensureDNDPermission(prompt: true) else {
             NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             return
         }
@@ -124,20 +124,19 @@ final class SystemActionManager {
         if result.success && result.output.lowercased().contains("true") {
             postToast("Do Not Disturb toggled")
         } else {
-            if result.error.lowercased().contains("not authorized") || result.error.lowercased().contains("not permitted") {
+            if !ensureDNDPermission(prompt: false) {
                 postToast("DND blocked: allow Accessibility for Floating Orb.")
                 openAccessibilitySettings()
                 NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             } else {
-                postToast("Could not toggle DND. Open Accessibility settings and retry.")
-                NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
+                postToast("Could not find DND control in Control Center. Keep Control Center language in English and retry.")
             }
         }
     }
 
     func triggerDNDPermissionSetup() {
-        if ensureAccessibilityPermission(prompt: true) {
-            postToast("Accessibility already granted. Retry DND.")
+        if ensureDNDPermission(prompt: true) {
+            postToast("DND permission ready. Retry DND.")
         } else {
             postToast("Grant Accessibility, then tap Retry DND.")
             openAccessibilitySettings()
@@ -251,17 +250,21 @@ final class SystemActionManager {
     }
 
     func accessibilityPermissionGranted() -> Bool {
-        AXIsProcessTrusted()
+        ensureDNDPermission(prompt: false)
     }
 
-    private func ensureAccessibilityPermission(prompt: Bool) -> Bool {
+    private func ensureDNDPermission(prompt: Bool) -> Bool {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt]
         let trusted = AXIsProcessTrustedWithOptions(options)
-        if !trusted {
-            postToast("Enable Accessibility for Floating Orb to use DND.")
-            openAccessibilitySettings()
-        }
-        return trusted
+        if !trusted { return false }
+
+        // Verify System Events UI scripting actually works (not just trust bit).
+        let probe = runAppleScriptCapture("""
+        tell application "System Events"
+            return UI elements enabled
+        end tell
+        """)
+        return probe.success && probe.output.lowercased().contains("true")
     }
 
     func openAccessibilitySettings() {

@@ -187,6 +187,7 @@ struct ContentView: View {
     }
 
     private var dndPermissionGuidePanel: some View {
+        let hasPermission = SystemActionManager.shared.accessibilityPermissionGranted()
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("DND Permission Setup")
@@ -222,9 +223,9 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
             }
 
-            Text(SystemActionManager.shared.accessibilityPermissionGranted() ? "Accessibility granted." : "Accessibility not granted yet.")
+            Text(hasPermission ? "Accessibility granted." : "Accessibility not granted yet.")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(SystemActionManager.shared.accessibilityPermissionGranted() ? .green : .orange)
+                .foregroundStyle(hasPermission ? .green : .orange)
 
             Spacer(minLength: 0)
         }
