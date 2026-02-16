@@ -188,7 +188,7 @@ struct ContentView: View {
 
     private var dndPermissionGuidePanel: some View {
         let hasPermission = SystemActionManager.shared.accessibilityPermissionGranted()
-        VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("DND Permission Setup")
                     .font(.system(size: 16, weight: .semibold))
