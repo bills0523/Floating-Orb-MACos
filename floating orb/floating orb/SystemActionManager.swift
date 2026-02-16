@@ -1,6 +1,9 @@
 import Foundation
 import AppKit
-import UserNotifications
+
+extension Notification.Name {
+    static let floatingOrbToast = Notification.Name("floatingOrbToast")
+}
 
 /// Runs lightweight system actions and shell commands from SwiftUI.
 final class SystemActionManager {
@@ -15,51 +18,115 @@ final class SystemActionManager {
 
     func openFinder() {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: NSHomeDirectory())
+        postToast("Opened Finder")
     }
 
     func toggleDoNotDisturb() {
-        // Toggle Do Not Disturb via Control Center UI scripting.
-        // This requires Accessibility permission and UI labels may vary by macOS/localization.
-        let toggled = runAppleScript("""
+        // Toggle DND by scanning Control Center's UI tree.
+        let result = runAppleScriptCapture("""
         tell application "System Events"
             tell process "ControlCenter"
                 set frontmost to true
                 click (first menu bar item of menu bar 1 whose description contains "Control Center" or description contains "control center")
-                delay 0.25
-                set toggled to false
+                delay 0.3
+
+                set didToggle to false
+                set uiItems to {}
                 try
-                    set dndControl to first checkbox of (entire contents of window 1) whose (name contains "Do Not Disturb" or description contains "Do Not Disturb")
-                    click dndControl
-                    set toggled to true
+                    set uiItems to entire contents of window 1
                 end try
 
-                if toggled is false then
+                repeat with e in uiItems
+                    set n to ""
+                    set d to ""
                     try
-                        set focusControl to first button of (entire contents of window 1) whose (name contains "Focus" or description contains "Focus")
-                        click focusControl
-                    on error
-                        try
-                            set focusControl to first checkbox of (entire contents of window 1) whose (name contains "Focus" or description contains "Focus")
-                            click focusControl
-                        end try
+                        set n to (name of e) as text
                     end try
+                    try
+                        set d to (description of e) as text
+                    end try
+                    if n contains "Do Not Disturb" or d contains "Do Not Disturb" then
+                        try
+                            perform action "AXPress" of e
+                        on error
+                            try
+                                click e
+                            end try
+                        end try
+                        set didToggle to true
+                        exit repeat
+                    end if
+                end repeat
+
+                if didToggle is false then
+                    repeat with e in uiItems
+                        set n to ""
+                        set d to ""
+                        try
+                            set n to (name of e) as text
+                        end try
+                        try
+                            set d to (description of e) as text
+                        end try
+                        if n contains "Focus" or d contains "Focus" then
+                            try
+                                perform action "AXPress" of e
+                            on error
+                                try
+                                    click e
+                                end try
+                            end try
+                            exit repeat
+                        end if
+                    end repeat
+
                     delay 0.2
                     try
-                        set dndControl to first checkbox of (entire contents of window 1) whose (name contains "Do Not Disturb" or description contains "Do Not Disturb")
-                        click dndControl
-                        set toggled to true
+                        set uiItems to entire contents of window 1
                     end try
+
+                    repeat with e in uiItems
+                        set n to ""
+                        set d to ""
+                        try
+                            set n to (name of e) as text
+                        end try
+                        try
+                            set d to (description of e) as text
+                        end try
+                        if n contains "Do Not Disturb" or d contains "Do Not Disturb" then
+                            try
+                                perform action "AXPress" of e
+                            on error
+                                try
+                                    click e
+                                end try
+                            end try
+                            set didToggle to true
+                            exit repeat
+                        end if
+                    end repeat
                 end if
 
                 key code 53
+                return didToggle
             end tell
         end tell
         """)
-        notify(title: "Floating Orb", body: toggled ? "Do Not Disturb toggle attempted." : "Could not locate Do Not Disturb control.")
+
+        if result.success && result.output.lowercased().contains("true") {
+            postToast("Do Not Disturb toggled")
+        } else {
+            postToast("Could not toggle DND. Check Accessibility permission.")
+        }
     }
 
     func runCustomCommand() {
-        _ = runShell("/usr/bin/open", arguments: ["-a", "Terminal"])
+        if runShell("/usr/bin/open", arguments: ["-a", "Terminal"]) {
+            postToast("Opened Terminal")
+        } else {
+            postToast("Failed to open Terminal")
+        }
     }
 
     func volumeUp(step: Int = 6) {
@@ -71,25 +138,18 @@ final class SystemActionManager {
     }
 
     private func adjustVolume(deltaPercent: Int) {
-        let didSet = runAppleScript("""
+        _ = runAppleScript("""
         set currentVolume to output volume of (get volume settings)
         set targetVolume to currentVolume + \(deltaPercent)
         if targetVolume > 100 then set targetVolume to 100
         if targetVolume < 0 then set targetVolume to 0
         set volume output volume targetVolume
         """)
-        if !didSet {
-            _ = runAppleScript("""
-            tell application "System Events"
-                key code \(deltaPercent > 0 ? 72 : 73)
-            end tell
-            """)
-        }
-        let current = currentVolumePercent()
-        if let current {
-            notify(title: "Floating Orb", body: "Current volume: \(current)%")
+
+        if let current = currentVolumePercent() {
+            postToast("Current volume: \(current)%")
         } else {
-            notify(title: "Floating Orb", body: "Volume changed.")
+            postToast("Volume changed")
         }
     }
 
@@ -123,6 +183,10 @@ final class SystemActionManager {
         runShell("/usr/bin/osascript", arguments: ["-e", script])
     }
 
+    private func runAppleScriptCapture(_ script: String) -> (success: Bool, output: String) {
+        runShellCapture("/usr/bin/osascript", arguments: ["-e", script])
+    }
+
     private func currentVolumePercent() -> Int? {
         let result = runShellCapture("/usr/bin/osascript", arguments: ["-e", "output volume of (get volume settings)"])
         guard result.success else { return nil }
@@ -130,13 +194,8 @@ final class SystemActionManager {
         return Int(trimmed)
     }
 
-    private func notify(title: String, body: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    private func postToast(_ message: String) {
+        NotificationCenter.default.post(name: .floatingOrbToast, object: nil, userInfo: ["message": message])
     }
 
     private func runShellCapture(_ launchPath: String, arguments: [String]) -> (success: Bool, output: String) {

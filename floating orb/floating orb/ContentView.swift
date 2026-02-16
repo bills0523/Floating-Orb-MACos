@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var isExpanded = false
     @State private var showingEditor = false
     @State private var window: NSWindow?
+    @State private var toastMessage: String?
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -32,11 +33,37 @@ struct ContentView: View {
         .frame(minWidth: 72, minHeight: 72)
         .contentShape(Rectangle())
         .background(WindowCapture(window: $window))
+        .overlay(alignment: .top) {
+            if let toastMessage {
+                Text(toastMessage)
+                    .font(.system(size: 12, weight: .medium))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.black.opacity(0.72))
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+                    .padding(.top, isExpanded ? 8 : -14)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
         .onTapGesture(count: 2) {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0.1)) {
                 isExpanded.toggle()
             }
             resizeWindow(expanded: isExpanded)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .floatingOrbToast)) { notification in
+            guard let message = notification.userInfo?["message"] as? String else { return }
+            withAnimation(.easeOut(duration: 0.2)) {
+                toastMessage = message
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                withAnimation(.easeIn(duration: 0.2)) {
+                    if toastMessage == message {
+                        toastMessage = nil
+                    }
+                }
+            }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isExpanded)
         .floatingPanelDraggable()
