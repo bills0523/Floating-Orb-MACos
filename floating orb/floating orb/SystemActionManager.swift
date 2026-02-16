@@ -29,7 +29,7 @@ final class SystemActionManager {
             return
         }
 
-        // Toggle DND by scanning Control Center's UI tree.
+        // Open Focus first, then toggle Do Not Disturb inside Focus panel.
         let result = runAppleScriptCapture("""
         tell application "System Events"
             tell process "ControlCenter"
@@ -43,6 +43,7 @@ final class SystemActionManager {
                     set uiItems to entire contents of window 1
                 end try
 
+                -- Step 1: open Focus module in Control Center.
                 repeat with e in uiItems
                     set n to ""
                     set d to ""
@@ -52,7 +53,34 @@ final class SystemActionManager {
                     try
                         set d to (description of e) as text
                     end try
-                    if n contains "Do Not Disturb" or d contains "Do Not Disturb" then
+                    if n contains "Focus" or d contains "Focus" then
+                        try
+                            perform action "AXPress" of e
+                        on error
+                            try
+                                click e
+                            end try
+                        end try
+                        exit repeat
+                    end if
+                end repeat
+
+                delay 0.25
+                try
+                    set uiItems to entire contents of window 1
+                end try
+
+                -- Step 2: toggle Do Not Disturb item inside Focus.
+                repeat with e in uiItems
+                    set n to ""
+                    set d to ""
+                    try
+                        set n to (name of e) as text
+                    end try
+                    try
+                        set d to (description of e) as text
+                    end try
+                    if n contains "Do Not Disturb" or d contains "Do Not Disturb" or n contains "DND" or d contains "DND" then
                         try
                             perform action "AXPress" of e
                         on error
@@ -64,56 +92,6 @@ final class SystemActionManager {
                         exit repeat
                     end if
                 end repeat
-
-                if didToggle is false then
-                    repeat with e in uiItems
-                        set n to ""
-                        set d to ""
-                        try
-                            set n to (name of e) as text
-                        end try
-                        try
-                            set d to (description of e) as text
-                        end try
-                        if n contains "Focus" or d contains "Focus" then
-                            try
-                                perform action "AXPress" of e
-                            on error
-                                try
-                                    click e
-                                end try
-                            end try
-                            exit repeat
-                        end if
-                    end repeat
-
-                    delay 0.2
-                    try
-                        set uiItems to entire contents of window 1
-                    end try
-
-                    repeat with e in uiItems
-                        set n to ""
-                        set d to ""
-                        try
-                            set n to (name of e) as text
-                        end try
-                        try
-                            set d to (description of e) as text
-                        end try
-                        if n contains "Do Not Disturb" or d contains "Do Not Disturb" then
-                            try
-                                perform action "AXPress" of e
-                            on error
-                                try
-                                    click e
-                                end try
-                            end try
-                            set didToggle to true
-                            exit repeat
-                        end if
-                    end repeat
-                end if
 
                 key code 53
                 return didToggle
@@ -129,7 +107,7 @@ final class SystemActionManager {
                 openAccessibilitySettings()
                 NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             } else {
-                postToast("Could not find DND control in Control Center. Keep Control Center language in English and retry.")
+                postToast("Could not find the Focus/Do Not Disturb toggle in Control Center.")
             }
         }
     }
