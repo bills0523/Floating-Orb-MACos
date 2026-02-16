@@ -8,13 +8,6 @@
 
 /* Begin PBXFileReference section */
 		5A2BF6752F21332F0043A2BE /* floating orb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "floating orb.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		5A2BF6832F2137A50043A2BE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		5A2BF6842F2137A50043A2BE /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
-		5A2BF6852F2137A50043A2BE /* FloatingPanelModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanelModifier.swift; sourceTree = "<group>"; };
-		5A2BF6862F2137A50043A2BE /* SystemActionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemActionManager.swift; sourceTree = "<group>"; };
-		5A2BF6872F2137A50043A2BE /* floating_orbApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = floating_orbApp.swift; sourceTree = "<group>"; };
-		5A2BF6902F2600000043A2BE /* ActionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionStore.swift; sourceTree = "<group>"; };
-		5A2BF6882F2137A50043A2BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -22,15 +15,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "floating orb";
 			sourceTree = "<group>";
-			children = (
-				5A2BF6902F2600000043A2BE /* ActionStore.swift */,
-				5A2BF6872F2137A50043A2BE /* floating_orbApp.swift */,
-				5A2BF6832F2137A50043A2BE /* ContentView.swift */,
-				5A2BF6842F2137A50043A2BE /* FloatingPanel.swift */,
-				5A2BF6852F2137A50043A2BE /* FloatingPanelModifier.swift */,
-				5A2BF6862F2137A50043A2BE /* SystemActionManager.swift */,
-				5A2BF6882F2137A50043A2BE /* Assets.xcassets */,
-			);
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -125,7 +109,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5A2BF68E2F2137A50043A2BE /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,26 +119,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5A2BF6912F2600000043A2BE /* ActionStore.swift in Sources */,
-				5A2BF68A2F2137A50043A2BE /* floating_orbApp.swift in Sources */,
-				5A2BF68B2F2137A50043A2BE /* ContentView.swift in Sources */,
-				5A2BF68C2F2137A50043A2BE /* FloatingPanel.swift in Sources */,
-				5A2BF68D2F2137A50043A2BE /* FloatingPanelModifier.swift in Sources */,
-				5A2BF68F2F2137A50043A2BE /* SystemActionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXBuildFile section */
-		5A2BF68A2F2137A50043A2BE /* floating_orbApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6872F2137A50043A2BE /* floating_orbApp.swift */; };
-		5A2BF68B2F2137A50043A2BE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6832F2137A50043A2BE /* ContentView.swift */; };
-		5A2BF68C2F2137A50043A2BE /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6842F2137A50043A2BE /* FloatingPanel.swift */; };
-		5A2BF68D2F2137A50043A2BE /* FloatingPanelModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6852F2137A50043A2BE /* FloatingPanelModifier.swift */; };
-		5A2BF68E2F2137A50043A2BE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A2BF6882F2137A50043A2BE /* Assets.xcassets */; };
-		5A2BF68F2F2137A50043A2BE /* SystemActionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6862F2137A50043A2BE /* SystemActionManager.swift */; };
-		5A2BF6912F2600000043A2BE /* ActionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2BF6902F2600000043A2BE /* ActionStore.swift */; };
-/* End PBXBuildFile section */
 
 /* Begin XCBuildConfiguration section */
 		5A2BF67E2F2133300043A2BE /* Debug */ = {
@@ -293,6 +260,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Floating Orb needs Automation permission to control System Events for appearance and system shortcuts.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -326,6 +294,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Floating Orb needs Automation permission to control System Events for appearance and system shortcuts.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

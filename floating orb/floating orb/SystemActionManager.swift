@@ -29,6 +29,23 @@ final class SystemActionManager {
         }
     }
 
+    func toggleSystemAppearance() {
+        let script = "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode"
+        guard let appleScript = NSAppleScript(source: script) else {
+            postToast("Failed to build appearance script")
+            return
+        }
+
+        var errorInfo: NSDictionary?
+        _ = appleScript.executeAndReturnError(&errorInfo)
+        if errorInfo == nil {
+            postToast("System appearance toggled")
+        } else {
+            postToast("Appearance toggle failed. Grant Automation access.")
+            NSLog("SystemActionManager appearance script error: \(String(describing: errorInfo))")
+        }
+    }
+
     func volumeUp(step: Int = 6) {
         adjustVolume(deltaPercent: max(1, step))
     }

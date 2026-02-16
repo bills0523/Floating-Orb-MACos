@@ -3,6 +3,7 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var actionStore: ActionStore
+    @StateObject private var clipboardManager = ClipboardManager()
     @State private var isExpanded = false
     @State private var showingEditor = false
     @State private var window: NSWindow?
@@ -87,6 +88,7 @@ struct ContentView: View {
                         }
                     }
                 }
+                ClipboardHistoryView(manager: clipboardManager)
                 Spacer(minLength: 0)
             }
         }
@@ -129,6 +131,7 @@ struct ContentView: View {
         let manager = SystemActionManager.shared
         switch action.kind {
         case .goHome: manager.goHome()
+        case .appearance: manager.toggleSystemAppearance()
         case .command: manager.runCustomCommand()
         case .finder: manager.openFinder()
         case .volumeUp: manager.volumeUp()
