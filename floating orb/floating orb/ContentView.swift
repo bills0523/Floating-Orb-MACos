@@ -5,6 +5,7 @@ struct ContentView: View {
     @EnvironmentObject var actionStore: ActionStore
     @State private var isExpanded = false
     @State private var showingEditor = false
+    @State private var showingDNDPermissionGuide = false
     @State private var window: NSWindow?
     @State private var toastMessage: String?
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
@@ -65,13 +66,21 @@ struct ContentView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .floatingOrbShowDNDPermissionGuide)) { _ in
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                showingEditor = false
+                showingDNDPermissionGuide = true
+            }
+        }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isExpanded)
         .floatingPanelDraggable()
     }
 
     private var contentPanel: some View {
         VStack(spacing: 16) {
-            if showingEditor {
+            if showingDNDPermissionGuide {
+                dndPermissionGuidePanel
+            } else if showingEditor {
                 editorPanel
             } else {
                 header
@@ -101,6 +110,7 @@ struct ContentView: View {
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     showingEditor = true
+                    showingDNDPermissionGuide = false
                 }
             } label: {
                 Image(systemName: "slider.horizontal.3")
@@ -172,6 +182,50 @@ struct ContentView: View {
                     }
                 }
             }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var dndPermissionGuidePanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("DND Permission Setup")
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+                Button("Done") {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showingDNDPermissionGuide = false
+                    }
+                }
+                .buttonStyle(.borderless)
+            }
+
+            Text("Allow Accessibility so Floating Orb can toggle Do Not Disturb.")
+                .font(.system(size: 12))
+
+            Text("1. Click Open Accessibility")
+                .font(.system(size: 12))
+            Text("2. Enable Floating Orb in the list")
+                .font(.system(size: 12))
+            Text("3. Return and click Retry DND")
+                .font(.system(size: 12))
+
+            HStack(spacing: 10) {
+                Button("Open Accessibility") {
+                    SystemActionManager.shared.triggerDNDPermissionSetup()
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("Retry DND") {
+                    SystemActionManager.shared.retryDNDToggle()
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Text(SystemActionManager.shared.accessibilityPermissionGranted() ? "Accessibility granted." : "Accessibility not granted yet.")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(SystemActionManager.shared.accessibilityPermissionGranted() ? .green : .orange)
+
             Spacer(minLength: 0)
         }
     }

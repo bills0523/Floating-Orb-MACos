@@ -4,6 +4,7 @@ import ApplicationServices
 
 extension Notification.Name {
     static let floatingOrbToast = Notification.Name("floatingOrbToast")
+    static let floatingOrbShowDNDPermissionGuide = Notification.Name("floatingOrbShowDNDPermissionGuide")
 }
 
 /// Runs lightweight system actions and shell commands from SwiftUI.
@@ -23,7 +24,10 @@ final class SystemActionManager {
     }
 
     func toggleDoNotDisturb() {
-        guard ensureAccessibilityPermission() else { return }
+        guard ensureAccessibilityPermission(prompt: true) else {
+            NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
+            return
+        }
 
         // Toggle DND by scanning Control Center's UI tree.
         let result = runAppleScriptCapture("""
@@ -123,10 +127,25 @@ final class SystemActionManager {
             if result.error.lowercased().contains("not authorized") || result.error.lowercased().contains("not permitted") {
                 postToast("DND blocked: allow Accessibility for Floating Orb.")
                 openAccessibilitySettings()
+                NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             } else {
                 postToast("Could not toggle DND. Open Accessibility settings and retry.")
+                NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             }
         }
+    }
+
+    func triggerDNDPermissionSetup() {
+        if ensureAccessibilityPermission(prompt: true) {
+            postToast("Accessibility already granted. Retry DND.")
+        } else {
+            postToast("Grant Accessibility, then tap Retry DND.")
+            openAccessibilitySettings()
+        }
+    }
+
+    func retryDNDToggle() {
+        toggleDoNotDisturb()
     }
 
     func runCustomCommand() {
@@ -231,8 +250,12 @@ final class SystemActionManager {
         }
     }
 
-    private func ensureAccessibilityPermission() -> Bool {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+    func accessibilityPermissionGranted() -> Bool {
+        AXIsProcessTrusted()
+    }
+
+    private func ensureAccessibilityPermission(prompt: Bool) -> Bool {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt]
         let trusted = AXIsProcessTrustedWithOptions(options)
         if !trusted {
             postToast("Enable Accessibility for Floating Orb to use DND.")
@@ -241,7 +264,7 @@ final class SystemActionManager {
         return trusted
     }
 
-    private func openAccessibilitySettings() {
+    func openAccessibilitySettings() {
         _ = runShell("/usr/bin/open", arguments: ["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
     }
 }
