@@ -20,7 +20,7 @@ struct FloatingOrbApp: App {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var panel: FloatingPanel<AnyView>?
     private let actionStore = ActionStore()
 
@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error {
                 NSLog("Notification permission request error: \(error)")
@@ -53,5 +54,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSLog("Notification permission not granted.")
             }
         }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
     }
 }
