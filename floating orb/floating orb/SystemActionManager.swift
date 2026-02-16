@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import UserNotifications
 
 /// Runs lightweight system actions and shell commands from SwiftUI.
 final class SystemActionManager {
@@ -19,43 +20,35 @@ final class SystemActionManager {
     func toggleDoNotDisturb() {
         // Toggle Do Not Disturb via Control Center UI scripting.
         // This requires Accessibility permission and UI labels may vary by macOS/localization.
-        _ = runAppleScript("""
+        let toggled = runAppleScript("""
         tell application "System Events"
             tell process "ControlCenter"
                 set frontmost to true
                 click (first menu bar item of menu bar 1 whose description contains "Control Center" or description contains "control center")
                 delay 0.25
+                set toggled to false
                 try
-                    click (first button of window 1 whose name contains "Focus")
-                on error
+                    set dndControl to first checkbox of (entire contents of window 1) whose (name contains "Do Not Disturb" or description contains "Do Not Disturb")
+                    click dndControl
+                    set toggled to true
+                end try
+
+                if toggled is false then
                     try
-                        click (first checkbox of window 1 whose name contains "Focus")
-                    on error
-                        try
-                            click (first button of window 1 whose description contains "Focus")
-                        on error
-                            click (first UI element of window 1 whose description contains "Focus")
-                        end try
+                        set focusControl to first button of (entire contents of window 1) whose (name contains "Focus" or description contains "Focus")
+                        click focusControl
+                        delay 0.2
+                        set dndControl to first checkbox of (entire contents of window 1) whose (name contains "Do Not Disturb" or description contains "Do Not Disturb")
+                        click dndControl
+                        set toggled to true
                     end try
                 end try
-                delay 0.2
-                try
-                    click (first checkbox of window 1 whose name contains "Do Not Disturb")
-                on error
-                    try
-                        click (first button of window 1 whose name contains "Do Not Disturb")
-                    on error
-                        try
-                            click (first button of window 1 whose description contains "Do Not Disturb")
-                        on error
-                            click (first UI element of window 1 whose description contains "Do Not Disturb")
-                        end try
-                    end try
-                end try
+
                 key code 53
             end tell
         end tell
         """)
+        notify(title: "Floating Orb", body: toggled ? "Do Not Disturb toggle attempted." : "Could not locate Do Not Disturb control.")
     }
 
     func runCustomCommand() {
@@ -77,16 +70,19 @@ final class SystemActionManager {
         if targetVolume > 100 then set targetVolume to 100
         if targetVolume < 0 then set targetVolume to 0
         set volume output volume targetVolume
-        display notification ("Current volume: " & targetVolume & "%") with title "Floating Orb"
         """)
         if !didSet {
             _ = runAppleScript("""
             tell application "System Events"
                 key code \(deltaPercent > 0 ? 72 : 73)
             end tell
-            set volumeValue to output volume of (get volume settings)
-            display notification ("Current volume: " & volumeValue & "%") with title "Floating Orb"
             """)
+        }
+        let current = currentVolumePercent()
+        if let current {
+            notify(title: "Floating Orb", body: "Current volume: \(current)%")
+        } else {
+            notify(title: "Floating Orb", body: "Volume changed.")
         }
     }
 
@@ -118,5 +114,46 @@ final class SystemActionManager {
     @discardableResult
     private func runAppleScript(_ script: String) -> Bool {
         runShell("/usr/bin/osascript", arguments: ["-e", script])
+    }
+
+    private func currentVolumePercent() -> Int? {
+        let result = runShellCapture("/usr/bin/osascript", arguments: ["-e", "output volume of (get volume settings)"])
+        guard result.success else { return nil }
+        let trimmed = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Int(trimmed)
+    }
+
+    private func notify(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = nil
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    private func runShellCapture(_ launchPath: String, arguments: [String]) -> (success: Bool, output: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: launchPath)
+        process.arguments = arguments
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let out = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let success = process.terminationStatus == 0
+            if !success && !err.isEmpty {
+                NSLog("SystemActionManager command error (\(launchPath)): \(err)")
+            }
+            return (success, out)
+        } catch {
+            NSLog("SystemActionManager shell capture error: \(error)")
+            return (false, "")
+        }
     }
 }

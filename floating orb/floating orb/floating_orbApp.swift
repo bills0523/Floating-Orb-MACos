@@ -8,6 +8,7 @@
 import SwiftUI
 import AppKit
 import ApplicationServices
+import UserNotifications
 
 @main
 struct FloatingOrbApp: App {
@@ -25,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         requestAccessibility()
+        requestNotificationPermission()
 
         let content = AnyView(ContentView()
             .environmentObject(actionStore))
@@ -38,6 +40,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let trusted = AXIsProcessTrustedWithOptions(options)
         if !trusted {
             NSLog("Accessibility permission not granted yet; prompting user.")
+        }
+    }
+
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if let error {
+                NSLog("Notification permission request error: \(error)")
+                return
+            }
+            if !granted {
+                NSLog("Notification permission not granted.")
+            }
         }
     }
 }
