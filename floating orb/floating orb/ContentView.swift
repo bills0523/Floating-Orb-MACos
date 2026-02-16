@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var showingDNDPermissionGuide = false
     @State private var window: NSWindow?
     @State private var toastMessage: String?
+    @State private var dndShortcutName = SystemActionManager.shared.dndShortcutName()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -210,6 +211,23 @@ struct ContentView: View {
                 .font(.system(size: 12))
             Text("3. Return and click Retry DND")
                 .font(.system(size: 12))
+
+            Text("DND Shortcut Name")
+                .font(.system(size: 12, weight: .semibold))
+            TextField("Toggle Focus", text: $dndShortcutName)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 10) {
+                Button("Save Shortcut Name") {
+                    SystemActionManager.shared.setDNDShortcutName(dndShortcutName)
+                }
+                .buttonStyle(.bordered)
+
+                Button("Test Shortcut") {
+                    SystemActionManager.shared.toggleDoNotDisturb()
+                }
+                .buttonStyle(.bordered)
+            }
 
             HStack(spacing: 10) {
                 Button("Open Accessibility") {

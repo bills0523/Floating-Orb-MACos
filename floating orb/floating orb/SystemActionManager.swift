@@ -10,6 +10,7 @@ extension Notification.Name {
 /// Runs lightweight system actions and shell commands from SwiftUI.
 final class SystemActionManager {
     static let shared = SystemActionManager()
+    private let dndShortcutKey = "floatingorb.dndShortcutName"
     private init() {}
 
     func goHome() {
@@ -24,12 +25,25 @@ final class SystemActionManager {
     }
 
     func toggleDoNotDisturb() {
+        // Prefer shortcut-based toggling (more stable than UI scripting).
+        let primaryShortcut = dndShortcutName()
+        if runShortcut(named: primaryShortcut) {
+            postToast("Do Not Disturb toggled")
+            return
+        }
+        for fallback in ["Toggle Focus", "Toggle Do Not Disturb", "Turn On Do Not Disturb", "Turn Off Do Not Disturb"] where fallback != primaryShortcut {
+            if runShortcut(named: fallback) {
+                postToast("Do Not Disturb toggled")
+                return
+            }
+        }
+
         guard ensureDNDPermission(prompt: true) else {
             NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             return
         }
 
-        // Open Focus first, then toggle Do Not Disturb inside Focus panel.
+        // Fallback: UI scripting path.
         let result = runAppleScriptCapture("""
         tell application "System Events"
             tell process "ControlCenter"
@@ -107,7 +121,8 @@ final class SystemActionManager {
                 openAccessibilitySettings()
                 NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             } else {
-                postToast("Could not find the Focus/Do Not Disturb toggle in Control Center.")
+                postToast("Could not toggle DND. Set a valid shortcut name in DND setup.")
+                NotificationCenter.default.post(name: .floatingOrbShowDNDPermissionGuide, object: nil)
             }
         }
     }
@@ -123,6 +138,19 @@ final class SystemActionManager {
 
     func retryDNDToggle() {
         toggleDoNotDisturb()
+    }
+
+    func dndShortcutName() -> String {
+        UserDefaults.standard.string(forKey: dndShortcutKey) ?? "Toggle Focus"
+    }
+
+    func setDNDShortcutName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            UserDefaults.standard.removeObject(forKey: dndShortcutKey)
+        } else {
+            UserDefaults.standard.set(trimmed, forKey: dndShortcutKey)
+        }
     }
 
     func runCustomCommand() {
@@ -189,6 +217,10 @@ final class SystemActionManager {
 
     private func runAppleScriptCapture(_ script: String) -> (success: Bool, output: String, error: String) {
         runShellCapture("/usr/bin/osascript", arguments: ["-e", script])
+    }
+
+    private func runShortcut(named name: String) -> Bool {
+        runShell("/usr/bin/shortcuts", arguments: ["run", name])
     }
 
     private func currentVolumePercent() -> Int? {
