@@ -5,7 +5,6 @@ import SwiftUI // for move(fromOffsets:toOffset:)
 struct OrbAction: Identifiable, Codable, Equatable {
     enum Kind: String, Codable {
         case goHome
-        case focus
         case command
         case finder
         case volumeUp
@@ -19,7 +18,6 @@ struct OrbAction: Identifiable, Codable, Equatable {
     var kind: Kind
 
     static let `default`: [OrbAction] = [
-        OrbAction(id: "focus", title: "Focus", systemImage: "moon.zzz", isEnabled: true, kind: .focus),
         OrbAction(id: "command", title: "Command", systemImage: "terminal", isEnabled: true, kind: .command),
         OrbAction(id: "finder", title: "Finder", systemImage: "folder", isEnabled: true, kind: .finder),
         OrbAction(id: "volUp", title: "Vol Up", systemImage: "speaker.wave.2", isEnabled: true, kind: .volumeUp),

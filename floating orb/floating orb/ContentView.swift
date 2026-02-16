@@ -5,10 +5,8 @@ struct ContentView: View {
     @EnvironmentObject var actionStore: ActionStore
     @State private var isExpanded = false
     @State private var showingEditor = false
-    @State private var showingDNDPermissionGuide = false
     @State private var window: NSWindow?
     @State private var toastMessage: String?
-    @State private var dndShortcutName = SystemActionManager.shared.dndShortcutName()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -67,21 +65,13 @@ struct ContentView: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .floatingOrbShowDNDPermissionGuide)) { _ in
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                showingEditor = false
-                showingDNDPermissionGuide = true
-            }
-        }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isExpanded)
         .floatingPanelDraggable()
     }
 
     private var contentPanel: some View {
         VStack(spacing: 16) {
-            if showingDNDPermissionGuide {
-                dndPermissionGuidePanel
-            } else if showingEditor {
+            if showingEditor {
                 editorPanel
             } else {
                 header
@@ -111,7 +101,6 @@ struct ContentView: View {
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     showingEditor = true
-                    showingDNDPermissionGuide = false
                 }
             } label: {
                 Image(systemName: "slider.horizontal.3")
@@ -140,7 +129,6 @@ struct ContentView: View {
         let manager = SystemActionManager.shared
         switch action.kind {
         case .goHome: manager.goHome()
-        case .focus: manager.toggleDoNotDisturb()
         case .command: manager.runCustomCommand()
         case .finder: manager.openFinder()
         case .volumeUp: manager.volumeUp()
@@ -183,68 +171,6 @@ struct ContentView: View {
                     }
                 }
             }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var dndPermissionGuidePanel: some View {
-        let hasPermission = SystemActionManager.shared.accessibilityPermissionGranted()
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("DND Permission Setup")
-                    .font(.system(size: 16, weight: .semibold))
-                Spacer()
-                Button("Done") {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showingDNDPermissionGuide = false
-                    }
-                }
-                .buttonStyle(.borderless)
-            }
-
-            Text("Allow Accessibility so Floating Orb can toggle Do Not Disturb.")
-                .font(.system(size: 12))
-
-            Text("1. Click Open Accessibility")
-                .font(.system(size: 12))
-            Text("2. Enable Floating Orb in the list")
-                .font(.system(size: 12))
-            Text("3. Return and click Retry DND")
-                .font(.system(size: 12))
-
-            Text("DND Shortcut Name")
-                .font(.system(size: 12, weight: .semibold))
-            TextField("Toggle Focus", text: $dndShortcutName)
-                .textFieldStyle(.roundedBorder)
-
-            HStack(spacing: 10) {
-                Button("Save Shortcut Name") {
-                    SystemActionManager.shared.setDNDShortcutName(dndShortcutName)
-                }
-                .buttonStyle(.bordered)
-
-                Button("Test Shortcut") {
-                    SystemActionManager.shared.toggleDoNotDisturb()
-                }
-                .buttonStyle(.bordered)
-            }
-
-            HStack(spacing: 10) {
-                Button("Open Accessibility") {
-                    SystemActionManager.shared.triggerDNDPermissionSetup()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("Retry DND") {
-                    SystemActionManager.shared.retryDNDToggle()
-                }
-                .buttonStyle(.bordered)
-            }
-
-            Text(hasPermission ? "Accessibility granted." : "Accessibility not granted yet.")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(hasPermission ? .green : .orange)
-
             Spacer(minLength: 0)
         }
     }
