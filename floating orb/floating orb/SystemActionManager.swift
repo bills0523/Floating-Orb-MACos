@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import ApplicationServices
 
 extension Notification.Name {
     static let floatingOrbToast = Notification.Name("floatingOrbToast")
@@ -22,6 +23,8 @@ final class SystemActionManager {
     }
 
     func toggleDoNotDisturb() {
+        guard ensureAccessibilityPermission() else { return }
+
         // Toggle DND by scanning Control Center's UI tree.
         let result = runAppleScriptCapture("""
         tell application "System Events"
@@ -117,7 +120,12 @@ final class SystemActionManager {
         if result.success && result.output.lowercased().contains("true") {
             postToast("Do Not Disturb toggled")
         } else {
-            postToast("Could not toggle DND. Check Accessibility permission.")
+            if result.error.lowercased().contains("not authorized") || result.error.lowercased().contains("not permitted") {
+                postToast("DND blocked: allow Accessibility for Floating Orb.")
+                openAccessibilitySettings()
+            } else {
+                postToast("Could not toggle DND. Open Accessibility settings and retry.")
+            }
         }
     }
 
@@ -183,7 +191,7 @@ final class SystemActionManager {
         runShell("/usr/bin/osascript", arguments: ["-e", script])
     }
 
-    private func runAppleScriptCapture(_ script: String) -> (success: Bool, output: String) {
+    private func runAppleScriptCapture(_ script: String) -> (success: Bool, output: String, error: String) {
         runShellCapture("/usr/bin/osascript", arguments: ["-e", script])
     }
 
@@ -198,7 +206,7 @@ final class SystemActionManager {
         NotificationCenter.default.post(name: .floatingOrbToast, object: nil, userInfo: ["message": message])
     }
 
-    private func runShellCapture(_ launchPath: String, arguments: [String]) -> (success: Bool, output: String) {
+    private func runShellCapture(_ launchPath: String, arguments: [String]) -> (success: Bool, output: String, error: String) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: launchPath)
         process.arguments = arguments
@@ -216,10 +224,24 @@ final class SystemActionManager {
             if !success && !err.isEmpty {
                 NSLog("SystemActionManager command error (\(launchPath)): \(err)")
             }
-            return (success, out)
+            return (success, out, err)
         } catch {
             NSLog("SystemActionManager shell capture error: \(error)")
-            return (false, "")
+            return (false, "", "\(error)")
         }
+    }
+
+    private func ensureAccessibilityPermission() -> Bool {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        let trusted = AXIsProcessTrustedWithOptions(options)
+        if !trusted {
+            postToast("Enable Accessibility for Floating Orb to use DND.")
+            openAccessibilitySettings()
+        }
+        return trusted
+    }
+
+    private func openAccessibilitySettings() {
+        _ = runShell("/usr/bin/open", arguments: ["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"])
     }
 }
