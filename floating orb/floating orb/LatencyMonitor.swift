@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 final class LatencyMonitor: ObservableObject {
     @Published var latencyMs: Int?
