@@ -4,30 +4,21 @@ import Combine
 
 final class LatencyMonitor: ObservableObject {
     @Published var latencyMs: Int?
+    @Published var isChecking = false
 
-    private var timer: Timer?
     private let session = URLSession(configuration: .ephemeral)
     private let url = URL(string: "https://captive.apple.com/hotspot-detect.html")!
 
-    init() {
-        ping()
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            self?.ping()
-        }
-    }
-
-    deinit {
-        timer?.invalidate()
-    }
-
-    private func ping() {
+    func checkNow() {
         var request = URLRequest(url: url)
         request.httpMethod = "HEAD"
         request.timeoutInterval = 3.0
         let start = Date()
+        isChecking = true
 
         session.dataTask(with: request) { [weak self] _, response, error in
             DispatchQueue.main.async {
+                self?.isChecking = false
                 guard error == nil,
                       let http = response as? HTTPURLResponse,
                       (200...399).contains(http.statusCode) else {
@@ -54,14 +45,14 @@ struct LatencyStatusView: View {
     }
 
     private var statusColor: Color {
-        guard let latency = monitor.latencyMs else { return .red }
+        guard let latency = monitor.latencyMs else { return .gray }
         if latency < 100 { return .green }
         if latency <= 300 { return .yellow }
         return .red
     }
 
     private var statusText: String {
-        guard let latency = monitor.latencyMs else { return "Error" }
+        guard let latency = monitor.latencyMs else { return monitor.isChecking ? "Checking..." : "Not checked" }
         return "\(latency)ms"
     }
 }

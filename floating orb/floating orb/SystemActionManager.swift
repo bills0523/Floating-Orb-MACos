@@ -75,19 +75,20 @@ final class SystemActionManager {
     }
 
     private func adjustVolume(deltaPercent: Int) {
-        _ = runAppleScript("""
-        set currentVolume to output volume of (get volume settings)
-        set targetVolume to currentVolume + \(deltaPercent)
-        if targetVolume > 100 then set targetVolume to 100
-        if targetVolume < 0 then set targetVolume to 0
-        set volume output volume targetVolume
-        """)
-
-        if let current = currentVolumePercent() {
-            postToast("Current volume: \(current)%")
-        } else {
-            postToast("Volume changed")
+        guard let current = currentVolumePercent() else {
+            postToast("Unable to read current volume")
+            return
         }
+        _ = setVolumePercent(current + deltaPercent)
+        if let updated = currentVolumePercent() {
+            postToast("Current volume: \(updated)%")
+        }
+    }
+
+    @discardableResult
+    func setVolumePercent(_ value: Int) -> Bool {
+        let clamped = max(0, min(100, value))
+        return runAppleScript("set volume output volume \(clamped)")
     }
 
     @discardableResult
@@ -120,7 +121,7 @@ final class SystemActionManager {
         runShell("/usr/bin/osascript", arguments: ["-e", script])
     }
 
-    private func currentVolumePercent() -> Int? {
+    func currentVolumePercent() -> Int? {
         let result = runShellCapture("/usr/bin/osascript", arguments: ["-e", "output volume of (get volume settings)"])
         guard result.success else { return nil }
         let trimmed = result.output.trimmingCharacters(in: .whitespacesAndNewlines)

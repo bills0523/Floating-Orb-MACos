@@ -2,22 +2,37 @@ import SwiftUI
 import AppKit
 
 struct ContentView: View {
+    enum ToolPage {
+        case volume
+        case clipboard
+        case qrCode
+        case latency
+        case referenceImage
+        case dateUtility
+        case quickTimer
+        case stickyNote
+        case screenRuler
+        case decisionMaker
+        case imageConverter
+        case textStats
+    }
+
     @EnvironmentObject var actionStore: ActionStore
-    @StateObject private var clipboardManager = ClipboardManager()
-    @StateObject private var latencyMonitor = LatencyMonitor()
     @State private var isExpanded = false
     @State private var showingEditor = false
+    @State private var toolPage: ToolPage?
     @State private var window: NSWindow?
     @State private var toastMessage: String?
     @State private var desktopIconsVisible = SystemActionManager.shared.desktopIconsVisible()
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
+    private let actionViewportHeight: CGFloat = 312
 
     var body: some View {
         ZStack {
             if isExpanded {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .frame(width: 360, height: 620)
+                    .frame(width: 332, height: 456)
                     .shadow(radius: 12)
                     .overlay(contentPanel)
                     .transition(.scale(scale: 0.85).combined(with: .opacity))
@@ -76,24 +91,26 @@ struct ContentView: View {
         VStack(spacing: 16) {
             if showingEditor {
                 editorPanel
+            } else if let toolPage {
+                toolPanel(for: toolPage)
             } else {
                 header
-                LatencyStatusView(monitor: latencyMonitor)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(displayedActions) { action in
-                        actionButton(systemName: iconName(for: action), title: actionTitle(for: action)) {
-                            perform(action)
+                ScrollView(.vertical) {
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(displayedActions) { action in
+                            actionButton(systemName: iconName(for: action), title: actionTitle(for: action)) {
+                                perform(action)
+                            }
+                        }
+                        actionButton(systemName: "xmark.circle", title: "Close") {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                isExpanded = false
+                            }
                         }
                     }
-                    actionButton(systemName: "xmark.circle", title: "Close") {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                            isExpanded = false
-                        }
-                    }
+                    .padding(.trailing, 2)
                 }
-                ClipboardHistoryView(manager: clipboardManager)
-                QRCodeGeneratorView()
+                .frame(height: actionViewportHeight)
                 Spacer(minLength: 0)
             }
         }
@@ -108,6 +125,7 @@ struct ContentView: View {
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     showingEditor = true
+                    toolPage = nil
                 }
             } label: {
                 Image(systemName: "slider.horizontal.3")
@@ -125,7 +143,7 @@ struct ContentView: View {
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
             }
-            .frame(maxWidth: .infinity, minHeight: 74)
+            .frame(maxWidth: .infinity, minHeight: 80)
             .padding(10)
             .background(.thinMaterial.opacity(0.65))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -140,14 +158,86 @@ struct ContentView: View {
             let newState = !desktopIconsVisible
             desktopIconsVisible = newState
             manager.toggleDesktopIcons(visible: newState)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 desktopIconsVisible = manager.desktopIconsVisible()
             }
         case .appearance: manager.toggleSystemAppearance()
         case .command: manager.runCustomCommand()
         case .finder: manager.openFinder()
-        case .volumeUp: manager.volumeUp()
-        case .volumeDown: manager.volumeDown()
+        case .volumeControl: toolPage = .volume
+        case .clipboard: toolPage = .clipboard
+        case .qrCode: toolPage = .qrCode
+        case .latency: toolPage = .latency
+        case .referenceImage: toolPage = .referenceImage
+        case .dateUtility: toolPage = .dateUtility
+        case .quickTimer: toolPage = .quickTimer
+        case .stickyNote: toolPage = .stickyNote
+        case .screenRuler: toolPage = .screenRuler
+        case .decisionMaker: toolPage = .decisionMaker
+        case .imageConverter: toolPage = .imageConverter
+        case .textStats: toolPage = .textStats
+        }
+    }
+
+    @ViewBuilder
+    private func toolPanel(for page: ToolPage) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text(toolTitle(for: page))
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+                Button("Back") {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        toolPage = nil
+                    }
+                }
+                .buttonStyle(.borderless)
+            }
+
+            switch page {
+            case .volume:
+                VolumeControlToolView()
+            case .clipboard:
+                ClipboardToolView()
+            case .qrCode:
+                QRCodeGeneratorView()
+            case .latency:
+                LatencyToolView()
+            case .referenceImage:
+                FloatingReferenceImageToolView()
+            case .dateUtility:
+                DateUtilityView()
+            case .quickTimer:
+                QuickTimerView()
+            case .stickyNote:
+                StickyNoteView()
+            case .screenRuler:
+                ScreenRulerView()
+            case .decisionMaker:
+                DecisionMakerView()
+            case .imageConverter:
+                ImageConverterView()
+            case .textStats:
+                ClipboardStatsView()
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func toolTitle(for page: ToolPage) -> String {
+        switch page {
+        case .volume: return "Volume"
+        case .clipboard: return "Clipboard"
+        case .qrCode: return "QR Code"
+        case .latency: return "Network Latency"
+        case .referenceImage: return "Reference Image"
+        case .dateUtility: return "Date Utility"
+        case .quickTimer: return "Quick Timer"
+        case .stickyNote: return "Scratchpad"
+        case .screenRuler: return "Screen Ruler"
+        case .decisionMaker: return "Decision Maker"
+        case .imageConverter: return "Image Converter"
+        case .textStats: return "Text Stats"
         }
     }
 
@@ -240,7 +330,7 @@ struct ContentView: View {
 
     private func resizeWindow(expanded: Bool) {
         guard let window else { return }
-        let size = expanded ? NSSize(width: 380, height: 640) : NSSize(width: 90, height: 90)
+        let size = expanded ? NSSize(width: 352, height: 476) : NSSize(width: 90, height: 90)
         window.setContentSize(size)
     }
 
@@ -257,6 +347,79 @@ struct ContentView: View {
     }
 }
 
+private struct VolumeControlToolView: View {
+    @State private var volumePercent: Double = 50
+    @State private var didLoad = false
+    private let manager = SystemActionManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("\(Int(volumePercent))%")
+                .font(.system(size: 26, weight: .bold, design: .rounded))
+
+            Slider(value: $volumePercent, in: 0...100, step: 1)
+                .onChange(of: volumePercent) { _, newValue in
+                    guard didLoad else { return }
+                    _ = manager.setVolumePercent(Int(newValue))
+                }
+
+            HStack(spacing: 8) {
+                Button("0%") { setVolume(0) }
+                Button("50%") { setVolume(50) }
+                Button("100%") { setVolume(100) }
+            }
+            .buttonStyle(.bordered)
+        }
+        .onAppear {
+            if let current = manager.currentVolumePercent() {
+                volumePercent = Double(current)
+            }
+            didLoad = true
+        }
+    }
+
+    private func setVolume(_ value: Int) {
+        volumePercent = Double(value)
+        _ = manager.setVolumePercent(value)
+    }
+}
+
+private struct ClipboardToolView: View {
+    @StateObject private var manager = ClipboardManager()
+
+    var body: some View {
+        ClipboardHistoryView(manager: manager)
+    }
+}
+
+private struct LatencyToolView: View {
+    @StateObject private var monitor = LatencyMonitor()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LatencyStatusView(monitor: monitor)
+            Button {
+                monitor.checkNow()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "dot.radiowaves.left.and.right")
+                    Text(monitor.isChecking ? "Checking..." : "Check Now")
+                }
+                .font(.system(size: 12, weight: .semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(monitor.isChecking)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            if monitor.latencyMs == nil && !monitor.isChecking {
+                monitor.checkNow()
+            }
+        }
+    }
+}
+
 #Preview {
     ContentView()
+        .environmentObject(ActionStore())
 }
