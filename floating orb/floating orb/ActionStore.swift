@@ -5,6 +5,7 @@ import SwiftUI // for move(fromOffsets:toOffset:)
 struct OrbAction: Identifiable, Codable, Equatable {
     enum Kind: String, Codable {
         case goHome
+        case desktopIcons
         case appearance
         case command
         case finder
@@ -19,6 +20,7 @@ struct OrbAction: Identifiable, Codable, Equatable {
     var kind: Kind
 
     static let `default`: [OrbAction] = [
+        OrbAction(id: "desktopIcons", title: "Desktop", systemImage: "eye", isEnabled: true, kind: .desktopIcons),
         OrbAction(id: "appearance", title: "Theme", systemImage: "sun.max.fill", isEnabled: true, kind: .appearance),
         OrbAction(id: "command", title: "Command", systemImage: "terminal", isEnabled: true, kind: .command),
         OrbAction(id: "finder", title: "Finder", systemImage: "folder", isEnabled: true, kind: .finder),
@@ -39,8 +41,11 @@ final class ActionStore: ObservableObject {
            let decoded = try? JSONDecoder().decode([OrbAction].self, from: data) {
             // Migration: remove legacy Desktop action and add appearance action if missing.
             var migrated = decoded.filter { $0.kind != .goHome }
+            if !migrated.contains(where: { $0.kind == .desktopIcons }) {
+                migrated.insert(OrbAction(id: "desktopIcons", title: "Desktop", systemImage: "eye", isEnabled: true, kind: .desktopIcons), at: 0)
+            }
             if !migrated.contains(where: { $0.kind == .appearance }) {
-                migrated.insert(OrbAction(id: "appearance", title: "Theme", systemImage: "sun.max.fill", isEnabled: true, kind: .appearance), at: 0)
+                migrated.insert(OrbAction(id: "appearance", title: "Theme", systemImage: "sun.max.fill", isEnabled: true, kind: .appearance), at: 1)
             }
             actions = migrated.isEmpty ? OrbAction.default : migrated
         } else {

@@ -21,6 +21,26 @@ final class SystemActionManager {
         postToast("Opened Finder")
     }
 
+    func desktopIconsVisible() -> Bool {
+        let result = runShellCapture("/usr/bin/defaults", arguments: ["read", "com.apple.finder", "CreateDesktop"])
+        guard result.success else { return true }
+        let value = result.output.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if value == "0" || value == "false" {
+            return false
+        }
+        return true
+    }
+
+    func toggleDesktopIcons(visible: Bool) {
+        let state = visible ? "true" : "false"
+        let command = "/usr/bin/defaults write com.apple.finder CreateDesktop \(state); /usr/bin/killall Finder"
+        if runShell("/bin/zsh", arguments: ["-lc", command]) {
+            postToast(visible ? "Desktop icons shown" : "Desktop icons hidden")
+        } else {
+            postToast("Failed to update desktop icon visibility")
+        }
+    }
+
     func runCustomCommand() {
         if runShell("/usr/bin/open", arguments: ["-a", "Terminal"]) {
             postToast("Opened Terminal")
@@ -135,5 +155,4 @@ final class SystemActionManager {
             return (false, "", "\(error)")
         }
     }
-
 }

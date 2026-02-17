@@ -4,10 +4,12 @@ import AppKit
 struct ContentView: View {
     @EnvironmentObject var actionStore: ActionStore
     @StateObject private var clipboardManager = ClipboardManager()
+    @StateObject private var latencyMonitor = LatencyMonitor()
     @State private var isExpanded = false
     @State private var showingEditor = false
     @State private var window: NSWindow?
     @State private var toastMessage: String?
+    @State private var desktopIconsVisible = SystemActionManager.shared.desktopIconsVisible()
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
@@ -15,7 +17,7 @@ struct ContentView: View {
             if isExpanded {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .frame(width: 320, height: 400)
+                    .frame(width: 360, height: 620)
                     .shadow(radius: 12)
                     .overlay(contentPanel)
                     .transition(.scale(scale: 0.85).combined(with: .opacity))
@@ -76,9 +78,11 @@ struct ContentView: View {
                 editorPanel
             } else {
                 header
+                LatencyStatusView(monitor: latencyMonitor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(displayedActions) { action in
-                        actionButton(systemName: action.systemImage, title: action.title) {
+                        actionButton(systemName: iconName(for: action), title: actionTitle(for: action)) {
                             perform(action)
                         }
                     }
@@ -89,6 +93,7 @@ struct ContentView: View {
                     }
                 }
                 ClipboardHistoryView(manager: clipboardManager)
+                QRCodeGeneratorView()
                 Spacer(minLength: 0)
             }
         }
@@ -131,12 +136,33 @@ struct ContentView: View {
         let manager = SystemActionManager.shared
         switch action.kind {
         case .goHome: manager.goHome()
+        case .desktopIcons:
+            let newState = !desktopIconsVisible
+            desktopIconsVisible = newState
+            manager.toggleDesktopIcons(visible: newState)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                desktopIconsVisible = manager.desktopIconsVisible()
+            }
         case .appearance: manager.toggleSystemAppearance()
         case .command: manager.runCustomCommand()
         case .finder: manager.openFinder()
         case .volumeUp: manager.volumeUp()
         case .volumeDown: manager.volumeDown()
         }
+    }
+
+    private func iconName(for action: OrbAction) -> String {
+        if action.kind == .desktopIcons {
+            return desktopIconsVisible ? "eye" : "eye.slash"
+        }
+        return action.systemImage
+    }
+
+    private func actionTitle(for action: OrbAction) -> String {
+        if action.kind == .desktopIcons {
+            return desktopIconsVisible ? "Hide Icons" : "Show Icons"
+        }
+        return action.title
     }
 
     private var editorPanel: some View {
@@ -214,7 +240,7 @@ struct ContentView: View {
 
     private func resizeWindow(expanded: Bool) {
         guard let window else { return }
-        let size = expanded ? NSSize(width: 340, height: 420) : NSSize(width: 90, height: 90)
+        let size = expanded ? NSSize(width: 380, height: 640) : NSSize(width: 90, height: 90)
         window.setContentSize(size)
     }
 
