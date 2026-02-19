@@ -2,6 +2,7 @@
 
 Floating Orb is a native macOS utility built with **Swift + SwiftUI + AppKit**.  
 It runs as a floating assistant orb (similar to Assistive Touch) that stays above other apps and opens into a tools panel.
+An introduction to this app is at https://docs.google.com/presentation/d/1t0Y0kE6faylg-bZ803McMtXrlJVrp2sfej9_IytoN0Y/edit?slide=id.p#slide=id.p
 
 ## Core Experience
 
